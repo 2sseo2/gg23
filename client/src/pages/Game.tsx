@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -12,10 +12,10 @@ import type { User } from "@shared/schema";
 
 export default function Game() {
   const [username, setUsername] = useState("");
-  const [clicks, setClicks] = useState(0);
+  const queryClient = useQueryClient();
   const { toast } = useToast();
-  
-  const { data: user, isSuccess } = useQuery<User>({
+
+  const { data: user, refetch: refetchUser } = useQuery<User>({
     queryKey: ["/api/users"],
     enabled: false
   });
@@ -29,29 +29,38 @@ export default function Game() {
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/users", { username });
       return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["/api/users"], data);
+      refetchUser();
     }
   });
 
   const updateClicks = useMutation({
     mutationFn: async (newClicks: number) => {
+      if (!user) return;
       const rank = getRankFromClicks(newClicks).name;
-      const res = await apiRequest("POST", `/api/users/${user!.id}/clicks`, {
+      const res = await apiRequest("POST", `/api/users/${user.id}/clicks`, {
         clicks: newClicks,
         rank
       });
       return res.json();
+    },
+    onSuccess: (data) => {
+      if (data) {
+        queryClient.setQueryData(["/api/users"], data);
+        queryClient.invalidateQueries({ queryKey: ["/api/leaderboard"] });
+      }
     }
   });
 
   const handleClick = () => {
     if (!user) return;
-    
-    const newClicks = clicks + 1;
-    setClicks(newClicks);
-    
-    const currentRank = getRankFromClicks(clicks);
+    const newClicks = user.clicks + 1;
+
+    const currentRank = getRankFromClicks(user.clicks);
     const newRank = getRankFromClicks(newClicks);
-    
+
     if (currentRank.name !== newRank.name) {
       toast({
         title: "Rank Up!",
@@ -59,7 +68,7 @@ export default function Game() {
         className: newRank.color
       });
     }
-    
+
     updateClicks.mutate(newClicks);
   };
 
@@ -69,13 +78,7 @@ export default function Game() {
     createUser.mutate();
   };
 
-  useEffect(() => {
-    if (user) {
-      setClicks(user.clicks);
-    }
-  }, [user]);
-
-  if (!isSuccess) {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600">
         <Card className="w-full max-w-md mx-4">
@@ -101,10 +104,10 @@ export default function Game() {
     );
   }
 
-  const currentRank = getRankFromClicks(clicks);
+  const currentRank = getRankFromClicks(user.clicks);
   const nextRank = ranks[ranks.indexOf(currentRank) + 1];
   const progress = nextRank
-    ? ((clicks - currentRank.requiredClicks) /
+    ? ((user.clicks - currentRank.requiredClicks) /
        (nextRank.requiredClicks - currentRank.requiredClicks)) * 100
     : 100;
 
@@ -119,12 +122,12 @@ export default function Game() {
               </h2>
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={clicks}
+                  key={user.clicks}
                   initial={{ scale: 1 }}
                   animate={{ scale: [1, 1.2, 1] }}
                   className={`text-4xl font-bold mt-2 ${currentRank.color}`}
                 >
-                  {clicks} Clicks
+                  {user.clicks} Clicks
                 </motion.div>
               </AnimatePresence>
             </div>
