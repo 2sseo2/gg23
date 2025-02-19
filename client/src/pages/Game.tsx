@@ -100,7 +100,7 @@ export default function Game() {
                 onChange={(e) => setUsername(e.target.value)}
               />
               <Button type="submit" className="w-full">
-                Start Clicking
+                Start GOONing
               </Button>
             </form>
           </CardContent>
@@ -158,7 +158,7 @@ export default function Game() {
                   className="w-32 h-32 rounded-full text-xl"
                   onClick={handleClick}
                 >
-                  Click!
+                  GOON!
                 </Button>
               </motion.div>
             </div>
