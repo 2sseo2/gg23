@@ -8,10 +8,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { ranks, getRankFromClicks } from "@/lib/ranks";
 import { apiRequest } from "@/lib/queryClient";
+import { Robot } from "@/components/Robot";
 import type { User } from "@shared/schema";
 
 export default function Game() {
   const [username, setUsername] = useState("");
+  const [isJumping, setIsJumping] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -60,6 +62,9 @@ export default function Game() {
 
     const currentRank = getRankFromClicks(user.clicks);
     const newRank = getRankFromClicks(newClicks);
+
+    setIsJumping(true);
+    setTimeout(() => setIsJumping(false), 300);
 
     if (currentRank.name !== newRank.name) {
       toast({
@@ -140,19 +145,23 @@ export default function Game() {
               <Progress value={progress} />
             </div>
 
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex justify-center"
-            >
-              <Button
-                size="lg"
-                className="w-32 h-32 rounded-full text-xl"
-                onClick={handleClick}
+            <div className="flex flex-col items-center gap-4">
+              <div className={currentRank.color}>
+                <Robot animate={isJumping} />
+              </div>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                Click!
-              </Button>
-            </motion.div>
+                <Button
+                  size="lg"
+                  className="w-32 h-32 rounded-full text-xl"
+                  onClick={handleClick}
+                >
+                  Click!
+                </Button>
+              </motion.div>
+            </div>
           </CardContent>
         </Card>
 
